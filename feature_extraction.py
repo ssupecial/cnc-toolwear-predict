@@ -27,7 +27,7 @@ for sensor in ["Acc_X", "Acc_Y", "Acc_Z", "AE", "Force_X", "Force_Y", "Force_Z"]
 df = pd.DataFrame(columns=columns)
 
 
-def feature_extraction(data):
+def feature_extraction(data, sigma_multiplier=3):
     # 1) Mean Value
     mean_value = np.mean(np.abs(data))
 
@@ -68,6 +68,19 @@ def feature_extraction(data):
 
     # 12) Frequency Centroid
     frequency_centroid = np.sum(freqs * power_spectrum) / np.sum(power_spectrum)
+
+    # 13) Anomaly Count
+    upper_limit = mean_value + sigma_multiplier * std_dev
+    lower_limit = mean_value - sigma_multiplier * std_dev
+    anomaly_count = ((data < lower_limit) | (data > upper_limit)).sum().sum()
+
+    # 14) Widest Peak Width
+    flattened_data = data.values.flatten()
+    height_threshold = std_dev * 2
+    peaks, properties = find_peaks(flattened_data, height=height_threshold)
+    results_full = peak_widths(flattened_data, peaks, rel_height=0.5)
+    widths = results_full[0]
+    widest_peak_width = max(widths) if widths.size > 0 else 0
 
     return (
         mean_value,
